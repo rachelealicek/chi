@@ -44,9 +44,8 @@ func TestLogger_ContextCancellation_SingleLog(t *testing.T) {
 
 	mw.ServeHTTP(rec, req)
 
-	// Give the deferred log time to run
-	time.Sleep(10 * time.Millisecond)
-
+	// WriteLog runs synchronously via defer before ServeHTTP returns,
+	// so logCount is already updated — no sleep needed.
 	mu.Lock()
 	if logCount != 1 {
 		t.Errorf("expected exactly 1 log entry, got %d", logCount)
@@ -80,8 +79,6 @@ func TestLogger_NormalCompletion_SingleLog(t *testing.T) {
 	rec := httptest.NewRecorder()
 	mw.ServeHTTP(rec, req)
 
-	time.Sleep(10 * time.Millisecond)
-
 	mu.Lock()
 	if logCount != 1 {
 		t.Errorf("expected exactly 1 log entry, got %d", logCount)
@@ -111,8 +108,6 @@ func TestLogger_ContextCanceled_LogsError(t *testing.T) {
 
 	mw.ServeHTTP(rec, req)
 
-	time.Sleep(10 * time.Millisecond)
-
 	output := buf.String()
 	if !strings.Contains(output, "status=499") {
 		t.Errorf("expected status=499 in log for canceled request, got: %s", output)
@@ -134,8 +129,6 @@ func TestLogger_NormalCompletion_Logs200(t *testing.T) {
 	req := httptest.NewRequest("GET", "/ok", nil)
 	rec := httptest.NewRecorder()
 	mw.ServeHTTP(rec, req)
-
-	time.Sleep(10 * time.Millisecond)
 
 	output := buf.String()
 	if !strings.Contains(output, "status=200") {
@@ -199,8 +192,6 @@ func TestLogger_MultipleRequests_EachOneLog(t *testing.T) {
 		rec := httptest.NewRecorder()
 		mw.ServeHTTP(rec, req)
 	}
-
-	time.Sleep(50 * time.Millisecond)
 
 	mu.Lock()
 	if logCount != 5 {
